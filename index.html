@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TAQUERIA - VIKINGOS</title>
+  <link
+    rel="icon"
+    href="https://img.lovepik.com/png/20231115/viking-head-clipart-cartoon-viking-head_597096_wh860.png"
+    type="image/png"
+  />
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(to right, #ffe259, #ffa751);
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 800px;
+      margin: 30px auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    }
+    h1,
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    label,
+    select,
+    input,
+    button {
+      display: block;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+    select,
+    input {
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 10px;
+      background-color: #28a745;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .btn-send {
+      background-color: #007bff;
+    }
+    .pedido-item {
+      background: #f1f1f1;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+      .container {
+        margin: 10px;
+        padding: 15px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      label,
+      select,
+      input,
+      button {
+        width: 100%;
+        font-size: 1.1em;
+      }
+      button {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>𖤍 TAQUERIA - VIKINGOS 𖤍</h1>
+    <h2>⚔️ Ordene su pedido ⚔️</h2>
+
+    <label for="producto">🍽️ Categoría de producto:</label>
+    <select id="producto" onchange="mostrarOpciones()">
+      <option value="">-- Selecciona Producto --</option>
+      <option value="Tacos">Tacos</option>
+      <option value="PorKilo">Por Kilo</option>
+      <option value="Tortas">Tortas</option>
+      <option value="Hamburguesas">Hamburguesas</option>
+      <option value="Alambres">Alambres</option>
+      <option value="Huaraches">Huaraches</option>
+      <option value="Paquetes">Paquetes</option>
+      <option value="Combos">Combos</option>
+      <option value="Tortillas">Tortillas</option>
+    </select>
+
+    <div id="opciones" style="margin-top: 15px"></div>
+
+    <div id="divCantidad" style="display: none; margin-top: 10px;">
+      <label for="cantidad">Cantidad:</label>
+      <input type="number" id="cantidad" value="1" min="1" />
+    </div>
+
+    <button onclick="agregarAlPedido()">Agregar al pedido</button>
+
+    <div id="listaPedido" style="margin-top: 20px"></div>
+    <p>
+      <strong>Total:</strong> $<span id="total">0</span>
+    </p>
+
+    <section style="margin-top: 20px">
+      <label for="tipoPago">💳 Tipo de pago:</label>
+      <select id="tipoPago" onchange="cambiarOpcionesPago()">
+        <option value="">-- Selecciona --</option>
+        <option value="Transferencia">Transferencia</option>
+        <option value="Tarjeta">Tarjeta</option>
+        <option value="Efectivo">Efectivo</option>
+      </select>
+
+      <div id="detallesPago" style="margin-top: 10px"></div>
+    </section>
+
+    <div id="datosCliente" style="margin-top: 20px">
+      <h3>Datos del cliente</h3>
+      <label for="nombre">Nombre:</label>
+      <input type="text" id="nombre" placeholder="Tu nombre" required />
+      <label for="apellido">Apellido:</label>
+      <input type="text" id="apellido" placeholder="Tu apellido" required />
+      <label for="direccion">Dirección o link de ubicación (Google Maps):</label>
+      <input
+        type="text"
+        id="direccion"
+        placeholder="Ej. Av. Juárez 123 o link Google Maps"
+        required
+      />
+    </div>
+
+    <button onclick="confirmarPedido()">📲 Enviar pedido por WhatsApp</button>
+  </main>
+
+  <footer style="text-align: center; margin-top: 20px; color: #555">
+    <p>© 2025 Taquería Vikingos. Todos los derechos reservados.</p>
+  </footer>
+
+  <script>
+    const productos = {};
+    const descripciones = {
+      Hamburguesas: {
+        Tradicional: "Lleva jamón, tocino, Q.Blanco, Q. Amarrillo.",
+        Hawaiana: "Incluye Piña.",
+        Especial: "Incluye Champiñones.",
+        Vikinga:
+          "Carne al Pastor, Jamón, Lechuga, Tocino, Q. Amarrillo, Q. Blanco.",
+      },
+      Tortas: {
+        Hawaiana: "Con pastor, jamón, piña y queso Oaxaca.",
+        Vikinga:
+          "Aguacate, jitomate, cebolla, frijoles, bistec, pastor, pollo.",
+      },
+    };
+    let pedido = [];
+
+    async function cargarProductosDesdeSheet() {
+      try {
+        const response = await fetch(
+          "https://script.google.com/macros/s/AKfycbz0CZtP3-PTlQ5zFbbhWkv8BEuHGa1V9OI42yPxPNY3L6hy7wMySH3YLVYSgPwAzoPH/exec"
+        );
+        const data = await response.json();
+
+        for (let key in productos) {
+          if (Object.hasOwnProperty.call(productos, key)) {
+            delete productos[key];
+          }
+        }
+
+        for (let categoria in data) {
+          productos[categoria] = {};
+          for (let nombre in data[categoria]) {
+            productos[categoria][nombre] = {
+              precio: data[categoria][nombre].precio,
+              cantidad: data[categoria][nombre].cantidad,
+            };
+          }
+        }
+
+        console.log("Productos cargados:", productos);
+        const prodSelect = document.getElementById("producto");
+        if (prodSelect && prodSelect.value) {
+          mostrarOpciones();
+        }
+      } catch (error) {
+        console.error("Error al cargar productos desde Google Sheets:", error);
+        alert("No se pudieron cargar los productos. Intenta recargar la página.");
+      }
+    }
+
+    function mostrarOpciones() {
+      const prod = document.getElementById("producto").value;
+      const opciones = document.getElementById("opciones");
+      opciones.innerHTML = "";
+
+      document.getElementById("divCantidad").style.display = "block";
+
+      if (productos[prod]) {
+        let html = `<label>Tipo:</label><select id="tipo" onchange="actualizarDescripcion('${prod}'); mostrarTipoCarneHuaraches()">`;
+       for (let tipo in productos[prod]) {
+  const item = productos[prod][tipo];
+  const agotado = item.cantidad <= 0;
+  html += `<option value="${tipo}" ${agotado ? 'disabled' : ''}>
+    ${tipo} - $${item.precio} ${agotado ? '(AGOTADO)' : `(Disponible: ${item.cantidad})`}
+  </option>`;
+}
+
+       
+            html += `</select>`;
+
+        html += `<div id="descripcionProducto" style="margin-bottom: 10px; font-style: italic; color: #555;"></div>`;
+
+        if (["Tacos", "Alambres", "Huaraches"].includes(prod)) {
+          html += `
+            <label>¿Con verdura?</label>
+            <select id="verdura">
+              <option value="Sí">Sí</option>
+              <option value="No">No</option>
+            </select>
+            <label>Tipo de salsa:</label>
+            <select id="salsa">
+              <option value="Verde">Verde</option>
+              <option value="Verde Aparte">Verde Aparte</option>
+              <option value="Roja">Roja</option>
+              <option value="Roja Aparte">Roja Aparte</option>
+              <option value="Sin salsa">Sin salsa</option>
+            </select>
+          `;
+        }
+
+        if (prod === "Tortas") {
+          html += `
+            <label id="labelCarne" style="display:none;">Tipo de carne:</label>
+            <select id="carne" style="display:none;">
+              <option value="Pastor">Pastor</option>
+              <option value="Bistec">Bistec</option>
+              <option value="Longaniza">Longaniza</option>
+              <option value="Chistorra">Chistorra</option>
+              <option value="Suadero">Suadero</option>
+              <option value="Pollo">Pollo</option>
+              <option value="Bistec de puerco">Bistec de puerco</option>
+            </select>
+          `;
+        }
+
+        if (prod === "Huaraches") {
+          html += `
+            <label id="labelCarneHuaraches" style="display:none;">Tipo de carne:</label>
+            <select id="carneHuaraches" style="display:none;">
+              <option value="Pastor">Pastor</option>
+              <option value="Bistec">Bistec</option>
+              <option value="Longaniza">Longaniza</option>
+              <option value="Chistorra">Chistorra</option>
+              <option value="Suadero">Suadero</option>
+              <option value="Pollo">Pollo</option>
+              <option value="Bistec de puerco">Bistec de puerco</option>
+            </select>
+          `;
+        }
+
+        opciones.innerHTML = html;
+        actualizarDescripcion(prod);
+        mostrarTipoCarneHuaraches();
+      }
+    }
+
+    function actualizarDescripcion(prod) {
+      const tipoSelect = document.getElementById("tipo");
+      const descripcionDiv = document.getElementById("descripcionProducto");
+      const carneSelect = document.getElementById("carne");
+      const labelCarne = document.getElementById("labelCarne");
+
+      const tipoSeleccionado = tipoSelect?.value;
+
+      if (descripciones[prod] && descripciones[prod][tipoSeleccionado]) {
+        descripcionDiv.textContent = descripciones[prod][tipoSeleccionado];
+      } else {
+        descripcionDiv.textContent = "";
+      }
+
+      if (prod === "Tortas") {
+        if (["Hawaiana", "Vikinga"].includes(tipoSeleccionado)) {
+          carneSelect.style.display = "none";
+          labelCarne.style.display = "none";
+        } else {
+          carneSelect.style.display = "inline-block";
+          labelCarne.style.display = "inline-block";
+        }
+      }
+    }
+
+    function mostrarTipoCarneHuaraches() {
+      const prod = document.getElementById("producto").value;
+      if (prod !== "Huaraches") return;
+
+      const tipoSelect = document.getElementById("tipo");
+      const tipo = tipoSelect?.value;
+      const labelCarne = document.getElementById("labelCarneHuaraches");
+      const carneSelect = document.getElementById("carneHuaraches");
+
+      if (tipo === "Especial") {
+        labelCarne.style.display = "inline-block";
+        carneSelect.style.display = "inline-block";
+      } else {
+        labelCarne.style.display = "none";
+        carneSelect.style.display = "none";
+      }
+    }
+
+    function agregarAlPedido() {
+      const prod = document.getElementById("producto").value;
+      const tipo = document.getElementById("tipo")?.value;
+      const cant = parseInt(document.getElementById("cantidad").value);
+      const verdura = document.getElementById("verdura")?.value;
+      const salsa = document.getElementById("salsa")?.value;
+
+      let carne = null;
+      if (prod === "Tortas") carne = document.getElementById("carne")?.value;
+      else if (prod === "Huaraches" && tipo === "Especial")
+        carne = document.getElementById("carneHuaraches")?.value;
+
+      if (!prod || !tipo || cant < 1) return alert("Completa todos los campos");
+
+      if (productos[prod][tipo].cantidad < cant) {
+        return alert(
+          `Lo sentimos, solo hay ${productos[prod][tipo].cantidad} unidades disponibles de ${tipo} (${prod}).`
+        );
+      }
+
+      const precio = productos[prod][tipo].precio;
+      const total = precio * cant;
+
+      pedido.push({ prod, tipo, cant, precio, total, verdura, salsa, carne });
+      actualizarLista();
+    }
+
+    function actualizarLista() {
+      const lista = document.getElementById("listaPedido");
+      const totalEl = document.getElementById("total");
+      lista.innerHTML = "";
+      let total = 0;
+
+      pedido.forEach((item, i) => {
+        total += item.total;
+        let texto = `${item.cant} x ${item.tipo} (${item.prod}) - $${item.total}`;
+        if (["Tacos", "Alambres", "Huaraches"].includes(item.prod)) {
+          texto += `<br>Verdura: ${item.verdura}, Salsa: ${item.salsa}`;
+        }
+        if (
+          item.prod === "Tortas" &&
+          item.carne &&
+          !["Hawaiana", "Vikinga"].includes(item.tipo)
+        ) {
+          texto += `<br>Carne: ${item.carne}`;
+        }
+        if (item.prod === "Huaraches" && item.tipo === "Especial" && item.carne) {
+          texto += `<br>Carne: ${item.carne}`;
+        }
+
+        lista.innerHTML += `
+          <div class='pedido-item' style="margin-bottom: 10px;">
+            ${texto}
+            <br><button onclick="eliminarItem(${i})" style="background-color: red; color: white; border: none; padding: 4px 8px; margin-top: 5px; cursor: pointer;">❌ Eliminar</button>
+          </div>`;
+      });
+
+      totalEl.textContent = total;
+    }
+
+    function eliminarItem(indice) {
+      if (confirm("¿Estás seguro de eliminar este producto del pedido?")) {
+        pedido.splice(indice, 1);
+        actualizarLista();
+      }
+    }
+
+    function cambiarOpcionesPago() {
+      const tipoPago = document.getElementById("tipoPago").value;
+      const contenedor = document.getElementById("detallesPago");
+      contenedor.innerHTML = "";
+
+      if (tipoPago === "Transferencia") {
+        contenedor.innerHTML = `
+          <p>Por favor, transfiere a esta cuenta:</p>
+          <p><strong>Banco:</strong> Santander</p>
+          <p><strong>Cuenta:</strong> 01123456789</p>
+          <p><strong>CLABE:</strong> 012345678901234567</p>
+          <label for="comprobante">Sube tu comprobante:</label>
+          <input type="file" id="comprobante" accept="image/*" />
+        `;
+      } else if (tipoPago === "Tarjeta") {
+        contenedor.innerHTML = `<p>Aceptamos tarjetas de débito y crédito al momento de la entrega.</p>`;
+      } else if (tipoPago === "Efectivo") {
+        contenedor.innerHTML = `<p>Pago en efectivo al momento de la entrega.</p>`;
+      }
+    }
+
+    function armarMensajeWhatsApp() {
+      if (pedido.length === 0) {
+        alert("Agrega productos al pedido primero.");
+        return null;
+      }
+
+      const nombre = document.getElementById("nombre").value.trim();
+      const apellido = document.getElementById("apellido").value.trim();
+      const direccion = document.getElementById("direccion").value.trim();
+      const tipoPago = document.getElementById("tipoPago").value;
+
+      if (!nombre || !apellido || !direccion || !tipoPago) {
+        alert("Completa todos los datos del cliente y tipo de pago.");
+        return null;
+      }
+
+      let mensaje = `*Pedido de Taquería Vikingos*%0A`;
+      mensaje += `Nombre: ${nombre} ${apellido}%0A`;
+      mensaje += `Dirección: ${direccion}%0A`;
+      mensaje += `Tipo de pago: ${tipoPago}%0A`;
+      mensaje += `Pedido:%0A`;
+
+      pedido.forEach((item, i) => {
+        mensaje += `${i + 1}) ${item.cant} x ${item.tipo} (${item.prod}) - $${item.total}`;
+        if (["Tacos", "Alambres", "Huaraches"].includes(item.prod)) {
+          mensaje += `, Verdura: ${item.verdura}, Salsa: ${item.salsa}`;
+        }
+        if (
+          item.prod === "Tortas" &&
+          item.carne &&
+          !["Hawaiana", "Vikinga"].includes(item.tipo)
+        ) {
+          mensaje += `, Carne: ${item.carne}`;
+        }
+        if (item.prod === "Huaraches" && item.tipo === "Especial" && item.carne) {
+          mensaje += `, Carne: ${item.carne}`;
+        }
+        mensaje += `%0A`;
+      });
+
+      mensaje += `Total: $${pedido.reduce((acc, i) => acc + i.total, 0)}%0A`;
+
+      if (tipoPago === "Transferencia") {
+        mensaje +=
+          "Por favor, adjunta comprobante de transferencia (se revisará antes del envío).%0A";
+      }
+
+      return mensaje;
+    }
+
+    async function confirmarPedido() {
+      const mensaje = armarMensajeWhatsApp();
+      if (!mensaje) return;
+
+      // Enviar pedido para actualizar inventario antes de abrir WhatsApp
+      try {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbz0CZtP3-PTlQ5zFbbhWkv8BEuHGa1V9OI42yPxPNY3L6hy7wMySH3YLVYSgPwAzoPH/exec", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(pedido),
+        });
+        const result = await response.json();
+
+        if (result.success) {
+          alert("Pedido recibido y stock actualizado. Ahora serás redirigido a WhatsApp.");
+          // Limpiar pedido tras confirmación
+          pedido = [];
+          actualizarLista();
+          await cargarProductosDesdeSheet();
+
+          // Abrir WhatsApp con mensaje
+          const telefono = "5215512345678"; // Cambia por tu número con código país (ej. 52 México)
+          window.open(
+            `https://wa.me/${telefono}?text=${mensaje}`,
+            "_blank"
+          );
+        } else {
+          alert(
+            "No se pudo actualizar el inventario: " + (result.error || "Error desconocido")
+          );
+        }
+      } catch (error) {
+        alert("Error al enviar el pedido. Intenta de nuevo más tarde.");
+        console.error("Error al enviar pedido:", error);
+      }
+    }
+
+    // Al cargar la página, cargar productos desde Google Sheets
+    window.onload = cargarProductosDesdeSheet;
+  </script>
+</body>
+</html>
