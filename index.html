@@ -10,6 +10,7 @@
     type="image/png"
   />
   <style>
+    /* --- Tu CSS igual --- */
     body {
       font-family: "Segoe UI", sans-serif;
       background: linear-gradient(to right, #ffe259, #ffa751);
@@ -173,7 +174,7 @@
     async function cargarProductosDesdeSheet() {
       try {
         const response = await fetch(
-          "https://script.google.com/macros/s/AKfycbz0CZtP3-PTlQ5zFbbhWkv8BEuHGa1V9OI42yPxPNY3L6hy7wMySH3YLVYSgPwAzoPH/exec"
+          "https://script.google.com/macros/s/AKfycbwpADnOcybwwdGJTdznoT0-eHNLxjumcWQGCvLATW9c3nh5E2rJ2jFmLoC0aEzCQJ33/exec"
         );
         const data = await response.json();
 
@@ -213,16 +214,14 @@
 
       if (productos[prod]) {
         let html = `<label>Tipo:</label><select id="tipo" onchange="actualizarDescripcion('${prod}'); mostrarTipoCarneHuaraches()">`;
-       for (let tipo in productos[prod]) {
-  const item = productos[prod][tipo];
-  const agotado = item.cantidad <= 0;
-  html += `<option value="${tipo}" ${agotado ? 'disabled' : ''}>
-    ${tipo} - $${item.precio} ${agotado ? '(AGOTADO)' : `(Disponible: ${item.cantidad})`}
-  </option>`;
-}
-
-       
-            html += `</select>`;
+        for (let tipo in productos[prod]) {
+          const item = productos[prod][tipo];
+          const agotado = item.cantidad <= 0;
+          html += `<option value="${tipo}" ${agotado ? 'disabled' : ''}>
+            ${tipo} - $${item.precio} ${agotado ? '(AGOTADO)' : `(Disponible: ${item.cantidad})`}
+          </option>`;
+        }
+        html += `</select>`;
 
         html += `<div id="descripcionProducto" style="margin-bottom: 10px; font-style: italic; color: #555;"></div>`;
 
@@ -465,31 +464,38 @@
       const mensaje = armarMensajeWhatsApp();
       if (!mensaje) return;
 
-      // Enviar pedido para actualizar inventario antes de abrir WhatsApp
+      // Crear arreglo solo con los campos necesarios para la API
+      const pedidoParaEnviar = pedido.map(item => ({
+        prod: item.prod,
+        tipo: item.tipo,
+        cant: item.cant,
+      }));
+
       try {
-        const response = await fetch("https://script.google.com/macros/s/AKfycbz0CZtP3-PTlQ5zFbbhWkv8BEuHGa1V9OI42yPxPNY3L6hy7wMySH3YLVYSgPwAzoPH/exec", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(pedido),
-        });
+        const response = await fetch(
+          "https://script.google.com/macros/s/AKfycbwpADnOcybwwdGJTdznoT0-eHNLxjumcWQGCvLATW9c3nh5E2rJ2jFmLoC0aEzCQJ33/exec",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(pedidoParaEnviar),
+          }
+        );
         const result = await response.json();
 
         if (result.success) {
-          alert("Pedido recibido y stock actualizado. Ahora serás redirigido a WhatsApp.");
-          // Limpiar pedido tras confirmación
+          alert(
+            "Pedido recibido y stock actualizado. Ahora serás redirigido a WhatsApp."
+          );
           pedido = [];
           actualizarLista();
           await cargarProductosDesdeSheet();
 
-          // Abrir WhatsApp con mensaje
-          const telefono = "5215512345678"; // Cambia por tu número con código país (ej. 52 México)
-          window.open(
-            `https://wa.me/${telefono}?text=${mensaje}`,
-            "_blank"
-          );
+          const telefono = "525525338668"; // Cambia por tu número con código país
+          window.open(`https://wa.me/${telefono}?text=${mensaje}`, "_blank");
         } else {
           alert(
-            "No se pudo actualizar el inventario: " + (result.error || "Error desconocido")
+            "No se pudo actualizar el inventario: " +
+              (result.error || "Error desconocido")
           );
         }
       } catch (error) {
